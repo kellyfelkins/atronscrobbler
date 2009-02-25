@@ -1,0 +1,75 @@
+Kelly Felkins
+23-Jan-05
+
+Atronscrobbler attempts to provide audioscrobbler plugin
+functionality for Voyetra Turtle Beach Audiotron users. To learn more
+about audioscrobbler, visit http://www.audioscrobbler.com/. To learn
+more about the audiotron, visit 
+http://www.turtlebeach.com/site/products/audiotron/producthome.asp.
+
+Atronscrobbler works by polling the configured audiotron and reporting
+play activity to audioscrobbler.
+
+Atronscrobbler is a perl script. It has been tested with perl 5.8.3 on
+Debian linux (version 'woody', I think) and Windows XP/cygwin version circa 2/feb/05.
+It will likely run on activestate perl on windows systems. 
+
+Required perl modules:
+
+	POSIX qw(strftime);
+	LWP::UserAgent;
+	Digest::MD5 qw(md5_hex);
+
+
+CONFIGURATION
+
+Atronscrobbler requires some basic configuration information. That 
+information is loaded from 2 possible configuration files.
+It looks first for a ~/.atronscrobbler. If that is not found it 
+looks for /etc/atronscrobbler. If that is not
+found it displays a message about configuration and exits.
+
+INSTALLATION
+
+Atronscrobbler is a simple perl script and will run anywhere you run
+perl scripts. I run it out of ~/bin.
+
+Create a configuration file either in your home directory or in /etc
+
+	~/.atronscrobbler
+
+or
+
+	/etc/atronscrobbler
+
+You can use the provided example configuration file as a template,
+also listed below:
+
+~/.atronscrobbler or /etc/atronscrobbler
+----------------------------------------
+
+# Replace things in brackets with your information. Remove the brackets, too.
+# Kelly Felkins
+# kellyfmail-atronscrobbler at yahoo dot com
+#
+# The audiotron_host is the host name or ip address of the audiotron. You
+# should be able to ping your audiotron using this address.
+#
+  audiotron_host = [audiotron host name or ip address here]
+#                  ----------------------------------------
+#
+# The audiotron may require a username and password. Enter them here:
+# If your audiotron does not require a username and password, leave
+# these blank.
+#
+  audiotron_username = [audiotron username, if required]
+#                      ---------------------------------
+  audiotron_password = [audiotron password, if required]
+#                      ---------------------------------
+# AudioScrobber requires a username and password. Enter those here:
+# http://www.audioscrobbler.com
+#
+  audioscrobbler_username = [audioscrobbler username]
+#                           -------------------------
+  audioscrobbler_password = [audioscrobbler password]
+#                           -------------------------

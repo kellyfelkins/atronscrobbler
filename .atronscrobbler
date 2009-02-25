@@ -1,0 +1,21 @@
+# Replace things in brackets with your information. Remove the brackets, too.
+# Kelly Felkins
+# kellyfmail-atronscrobbler at yahoo dot com
+#
+# The audiotron_host is the host name or ip address of the audiotron. You
+# should be able to ping your audiotron using this address.
+#
+  audiotron_host = [audiotron host name or ip address here]
+#
+# The audiotron may require a username and password. Enter them here:
+# If your audiotron does not require a username and password, leave
+# these blank.
+#
+  audiotron_username = [audiotron username, if required]
+  audiotron_password = [audiotron password, if required]
+#
+# AudioScrobber requires a username and password. Enter those here:
+# http://www.audioscrobbler.com
+#
+  audioscrobbler_username = [audioscrobbler username]
+  audioscrobbler_password = [audioscrobbler password]
