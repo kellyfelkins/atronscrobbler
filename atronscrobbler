@@ -106,109 +106,109 @@ my %atron_state;
 #   We see if we need to add anything to the send queue.
 #
 while (1) {
-  check_for_stuff_to_queue();
-  send_update();
-  sleep 10;
+    check_for_stuff_to_queue();
+    send_update();
+    sleep 10;
 }
 
 # Here we check to see if the atron is playing something and if
 # that something meets the requirements to send to AS. If so,
 # we queue it.
 sub check_for_stuff_to_queue {
-  %atron_state = %{ get_status() };
-  
-  # if the atron is off or inactive, then we clear
-  # what was last playing if anything, and exit.
-  if ( ! %atron_state || $atron_state{ State } eq 'Inactive' ) {
-    init_selection();
-    $sys_state = $SYS_STATE_ACTIVE;
-    return;
-  }
-
-  # Something is playing. Let's capture what was playing.
-  foreach my $key ( ( $AT_SOURCE, $AT_ARTIST, $AT_TITLE ) ) {
-    if ( ! $selection{ $key } || $atron_state{ $key } ne $selection{ $key } ) {
-      new_selection();
-      if ( $sys_state eq $SYS_STATE_INIT ) {
-	# do not send the first one ( the first one would get resent on startups )
-	$selection{ $SEL_STATE } = $SEL_STATE_SENT;
-	$sys_state = $SYS_STATE_ACTIVE;
-      }
-      last;
+    %atron_state = %{ get_status() };
+    
+    # if the atron is off or inactive, then we clear
+    # what was last playing if anything, and exit.
+    if ( ! %atron_state || $atron_state{ State } eq 'Inactive' ) {
+        init_selection();
+        $sys_state = $SYS_STATE_ACTIVE;
+        return;
     }
-  }
 
-  # Something is playing and we saved it, now, should it be queued?
-  # First, update the play time (this needs to be updated on each poll)
-  $selection{ $AT_PLAY_TIME } = $atron_state{ $AT_PLAY_TIME };
-  if ( $selection{ $SEL_STATE } eq $SEL_STATE_SENT ) {
-    $selection{ $SEL_UNSENT_REASON } = 'we did queue it';
-    return;
-  }
+    # Something is playing. Let's capture what was playing.
+    foreach my $key ( ( $AT_SOURCE, $AT_ARTIST, $AT_TITLE ) ) {
+        if ( ! $selection{ $key } || $atron_state{ $key } ne $selection{ $key } ) {
+            new_selection();
+            if ( $sys_state eq $SYS_STATE_INIT ) {
+                # do not send the first one ( the first one would get resent on startups )
+                $selection{ $SEL_STATE } = $SEL_STATE_SENT;
+                $sys_state = $SYS_STATE_ACTIVE;
+            }
+            last;
+        }
+    }
 
-  if ( $selection{ $AT_SOURCE } ne 'UNC' ) {
-    $selection{ $SEL_UNSENT_REASON } = 'not an mp3 -- probably streaming radio';
-    return;
-  }
+    # Something is playing and we saved it, now, should it be queued?
+    # First, update the play time (this needs to be updated on each poll)
+    $selection{ $AT_PLAY_TIME } = $atron_state{ $AT_PLAY_TIME };
+    if ( $selection{ $SEL_STATE } eq $SEL_STATE_SENT ) {
+        $selection{ $SEL_UNSENT_REASON } = 'we did queue it';
+        return;
+    }
 
-  if ( $selection{ $AT_TOTAL_TIME } == 0 ) {
-    $selection{ $SEL_UNSENT_REASON } = 'no total time???';
-    return;
-  }
+    if ( $selection{ $AT_SOURCE } ne 'UNC' ) {
+        $selection{ $SEL_UNSENT_REASON } = 'not an mp3 -- probably streaming radio';
+        return;
+    }
 
-  if ( $selection{ $AT_TOTAL_TIME } < $AS_MIN_LENGTH ) {
-    $selection{ $SEL_UNSENT_REASON } = "total time ($selection{ $AT_TOTAL_TIME }) less than min length ($AS_MIN_LENGTH)";
-    return;
-  }
+    if ( $selection{ $AT_TOTAL_TIME } == 0 ) {
+        $selection{ $SEL_UNSENT_REASON } = 'no total time???';
+        return;
+    }
 
-  if ( $selection{ $AT_TOTAL_TIME } > $AS_MAX_LENGTH ) {
-    $selection{ $SEL_UNSENT_REASON } = "total time ($selection{ $AT_TOTAL_TIME }) greater than max length ($AS_MAX_LENGTH)";
-    return;
-  }
+    if ( $selection{ $AT_TOTAL_TIME } < $AS_MIN_LENGTH ) {
+        $selection{ $SEL_UNSENT_REASON } = "total time ($selection{ $AT_TOTAL_TIME }) less than min length ($AS_MIN_LENGTH)";
+        return;
+    }
 
-  if (( $selection{ $AT_PLAY_TIME } / $selection{ $AT_TOTAL_TIME } < $AS_MIN_PERCENT ) && ( $selection{ $AT_PLAY_TIME } < $AS_MIN_SECONDS )) {
-    my $play_percent = int(( $selection{ $AT_PLAY_TIME } / $selection{ $AT_TOTAL_TIME }) * 100);
-    my $min_percent = int( $AS_MIN_PERCENT * 100);
-    $selection{ $SEL_UNSENT_REASON } = "play % ($play_percent) less than min % ($min_percent) AND ".
-      "play time ($selection{ $AT_PLAY_TIME }) less than min seconds ($AS_MIN_SECONDS)";
-    return;
-  }
+    if ( $selection{ $AT_TOTAL_TIME } > $AS_MAX_LENGTH ) {
+        $selection{ $SEL_UNSENT_REASON } = "total time ($selection{ $AT_TOTAL_TIME }) greater than max length ($AS_MAX_LENGTH)";
+        return;
+    }
 
-  # ok, passed all the tests, lets queue it.
-  queue_selection();
-  $selection{ $SEL_STATE } = $SEL_STATE_SENT;
-  $selection{ $SEL_UNSENT_REASON } = 'queued';
+    if (( $selection{ $AT_PLAY_TIME } / $selection{ $AT_TOTAL_TIME } < $AS_MIN_PERCENT ) && ( $selection{ $AT_PLAY_TIME } < $AS_MIN_SECONDS )) {
+        my $play_percent = int(( $selection{ $AT_PLAY_TIME } / $selection{ $AT_TOTAL_TIME }) * 100);
+        my $min_percent = int( $AS_MIN_PERCENT * 100);
+        $selection{ $SEL_UNSENT_REASON } = "play % ($play_percent) less than min % ($min_percent) AND ".
+            "play time ($selection{ $AT_PLAY_TIME }) less than min seconds ($AS_MIN_SECONDS)";
+        return;
+    }
+
+    # ok, passed all the tests, lets queue it.
+    queue_selection();
+    $selection{ $SEL_STATE } = $SEL_STATE_SENT;
+    $selection{ $SEL_UNSENT_REASON } = 'queued';
 }
 
 # new_selection saves the current state of the atron. 
 sub new_selection {
-  init_selection();
-  foreach ( ( $AT_SOURCE, $AT_ARTIST, $AT_TITLE, $AT_TOTAL_TIME ) ) {
-    $selection{ $_ } = $atron_state{ $_ };
-  }
-  my $epoch_time = time() - $atron_state{ $AT_PLAY_TIME };
-  $selection{ $SEL_START_TIME } = as_time( $epoch_time );
-  print '%% Something new is playing '.display_selection()."\n";
+    init_selection();
+    foreach ( ( $AT_SOURCE, $AT_ARTIST, $AT_TITLE, $AT_TOTAL_TIME ) ) {
+        $selection{ $_ } = $atron_state{ $_ };
+    }
+    my $epoch_time = time() - $atron_state{ $AT_PLAY_TIME };
+    $selection{ $SEL_START_TIME } = as_time( $epoch_time );
+    print '%% Something new is playing '.display_selection()."\n";
 }
 
 # initialize selection hash and print the reason the previous selection was 
 # not queued.
 sub init_selection {
-  if ( $selection{ $AT_ARTIST } && $selection{ $SEL_STATE } ne $SEL_STATE_SENT ) {
-    print '%% '.display_selection()." not sent: $selection{ $SEL_UNSENT_REASON }\n";
-  }
-  %selection = %def_selection;
+    if ( $selection{ $AT_ARTIST } && $selection{ $SEL_STATE } ne $SEL_STATE_SENT ) {
+        print '%% '.display_selection()." not sent: $selection{ $SEL_UNSENT_REASON }\n";
+    }
+    %selection = %def_selection;
 }
 
 sub display_selection {
-  my $display_selection = "$selection{ $AT_ARTIST } / $selection{ $AT_TITLE }";
-  return $display_selection;
+    my $display_selection = "$selection{ $AT_ARTIST } / $selection{ $AT_TITLE }";
+    return $display_selection;
 }
 
 sub as_time {
-  my $epoch_time = shift;
-  my $as_time = strftime( "%Y-%m-%d %H:%M:%S", gmtime( $epoch_time ) );
-  return $as_time;
+    my $epoch_time = shift;
+    my $as_time = strftime( "%Y-%m-%d %H:%M:%S", gmtime( $epoch_time ) );
+    return $as_time;
 }
 
 my (
@@ -216,15 +216,15 @@ my (
     @title_queue,
     @total_time_queue,
     @start_time_queue,
-   );
+    );
 
 sub queue_selection {
-  push ( @artist_queue, $selection{ $AT_ARTIST } );
-  push ( @title_queue, $selection{ $AT_TITLE } );
-  push ( @total_time_queue, $selection{ $AT_TOTAL_TIME } );
-  push ( @start_time_queue, $selection{ $SEL_START_TIME } );
+    push ( @artist_queue, $selection{ $AT_ARTIST } );
+    push ( @title_queue, $selection{ $AT_TITLE } );
+    push ( @total_time_queue, $selection{ $AT_TOTAL_TIME } );
+    push ( @start_time_queue, $selection{ $SEL_START_TIME } );
 }
-  
+
 # u=<username>
 # p=<md5sum of password, hex encoded>
 # a[0]=<artist name>
@@ -240,270 +240,270 @@ sub queue_selection {
 
 sub get_status {
 
-  my $user_agent = get_ua();
-  if (! $atron_req) {
-    $atron_req = HTTP::Request->new(GET => "http://$user_preferences{ $UP_AT_HOST }/Apigetstatus.asp");
-    if ( $user_preferences{ $UP_AT_USERNAME } ) {
-      $atron_req->authorization_basic( $user_preferences{ $UP_AT_USERNAME }, $user_preferences{ $UP_AT_PASSWORD });
+    my $user_agent = get_ua();
+    if (! $atron_req) {
+        $atron_req = HTTP::Request->new(GET => "http://$user_preferences{ $UP_AT_HOST }/Apigetstatus.asp");
+        if ( $user_preferences{ $UP_AT_USERNAME } ) {
+            $atron_req->authorization_basic( $user_preferences{ $UP_AT_USERNAME }, $user_preferences{ $UP_AT_PASSWORD });
+        }
     }
-  }
 
-  my %at_state;
-  my $res = $user_agent->request( $atron_req );
-  if (! $res->is_success) {
-    print STDERR $res->status_line, "\n";
-    return \%at_state;
+    my %at_state;
+    my $res = $user_agent->request( $atron_req );
+    if (! $res->is_success) {
+        print STDERR $res->status_line, "\n";
+        return \%at_state;
 
-  } else {
+    } else {
 
-    my @lines = split( "\n", $res->content );
-    foreach (@lines) {
-      my ($line) = /^\s*(.*?)\s*$/;
-      next unless ($line);
-      next if ($line eq '[End Status]');
-      next if ($line eq '[Status]');
-      #    print "$line\n";
-      my ($a1, $a2) = split('=', $line);
-      $a1 =~ /^\s*(.+?)\s*$/;
-      my $key = $1;
-      $a2 =~ /^\s*(.+?)\s*$/;
-      my $value = $1;
-      $at_state{ $key } = $value;
-    }
-    
-    if ( exists $at_state{ $AT_TITLE } ) {
+        my @lines = split( "\n", $res->content );
+        foreach (@lines) {
+            my ($line) = /^\s*(.*?)\s*$/;
+            next unless ($line);
+            next if ($line eq '[End Status]');
+            next if ($line eq '[Status]');
+            #    print "$line\n";
+            my ($a1, $a2) = split('=', $line);
+            $a1 =~ /^\s*(.+?)\s*$/;
+            my $key = $1;
+            $a2 =~ /^\s*(.+?)\s*$/;
+            my $value = $1;
+            $at_state{ $key } = $value;
+        }
+        
+        if ( exists $at_state{ $AT_TITLE } ) {
 #      print "++++ was: $at_state{ $AT_TITLE }\n";
-      $at_state{ $AT_TITLE } =~ s/- \(\d+\)$//;
+            $at_state{ $AT_TITLE } =~ s/- \(\d+\)$//;
 #      print "++++ now: $at_state{ $AT_TITLE }\n";
+        }
+        return \%at_state;
     }
-    return \%at_state;
-  }
 }
 
 sub get_ua {
 
-  if (! $user_agent) {
-    $user_agent = LWP::UserAgent->new;
-    $user_agent->agent( $0.'/'.$AS_CLIENT.'/'.$AS_CLIENT_VER );
-    $user_agent->from( 'kellyfmail-atronscrobbler@yahoo.com' );
-  }
-  return $user_agent;
+    if (! $user_agent) {
+        $user_agent = LWP::UserAgent->new;
+        $user_agent->agent( $0.'/'.$AS_CLIENT.'/'.$AS_CLIENT_VER );
+        $user_agent->from( 'kellyfmail-atronscrobbler@yahoo.com' );
+    }
+    return $user_agent;
 }
 
 # Check for or acquire an AS session
 sub as_session {
-  # we already have a session
-  if ( $as_submit_url ) {
-    return 1;
-  }
+    # we already have a session
+    if ( $as_submit_url ) {
+        return 1;
+    }
 
-  # We don't want to try too often for a session
-  my $time = time();
-  return if ( $time < ( $as_last_session_time + $as_session_interval ) );
-  $as_last_session_time = $time;
+    # We don't want to try too often for a session
+    my $time = time();
+    return if ( $time < ( $as_last_session_time + $as_session_interval ) );
+    $as_last_session_time = $time;
 
-  if (! $as_req) {
-    $as_req = HTTP::Request->new(GET => "http://post.audioscrobbler.com?hs=true&p=1.1&c=$AS_CLIENT&v=$AS_CLIENT_VER&u=$user_preferences{ $UP_AS_USERNAME }" );
-  }
+    if (! $as_req) {
+        $as_req = HTTP::Request->new(GET => "http://post.audioscrobbler.com?hs=true&p=1.1&c=$AS_CLIENT&v=$AS_CLIENT_VER&u=$user_preferences{ $UP_AS_USERNAME }" );
+    }
     
-  print "doing handshake...\n";
-  my $as_res = get_ua()->request( $as_req );
-  if (! $as_res->is_success) {
-    print STDERR $as_res->status_line, "\n";
-    $as_session_interval = $as_session_interval ? $as_session_interval*2 : 10;
-    print "will wait $as_session_interval before trying again\n";
-  } else {
-      
-    my @lines = split( "\n", $as_res->content );
-    if ( $lines[0] =~ /^UPTODATE$/ ) {
-      $as_md5_challenge = $lines[1];
-      $as_submit_url = $lines[2];
-      ( $as_submit_interval ) = $lines[3] =~ /^INTERVAL (.*)$/;
-    } 
-    elsif ( $lines[0] =~ /^UPDATE (.*)$/ ) {
-      print "HS MSG: Please update atronscrobbler. Visit $1\n";
-      $as_md5_challenge = $lines[1];
-      $as_submit_url = $lines[2];
-      ( $as_submit_interval ) = $lines[3] =~ /^INTERVAL (.*)$/;
+    print "doing handshake...\n";
+    my $as_res = get_ua()->request( $as_req );
+    if (! $as_res->is_success) {
+        print STDERR $as_res->status_line, "\n";
+        $as_session_interval = $as_session_interval ? $as_session_interval*2 : 10;
+        print "will wait $as_session_interval before trying again\n";
+    } else {
+        
+        my @lines = split( "\n", $as_res->content );
+        if ( $lines[0] =~ /^UPTODATE$/ ) {
+            $as_md5_challenge = $lines[1];
+            $as_submit_url = $lines[2];
+            ( $as_submit_interval ) = $lines[3] =~ /^INTERVAL (.*)$/;
+        } 
+        elsif ( $lines[0] =~ /^UPDATE (.*)$/ ) {
+            print "HS MSG: Please update atronscrobbler. Visit $1\n";
+            $as_md5_challenge = $lines[1];
+            $as_submit_url = $lines[2];
+            ( $as_submit_interval ) = $lines[3] =~ /^INTERVAL (.*)$/;
+        }
+        elsif ( $lines[0] =~ /^FAILED (.*)$/ ) {
+            print "HS MSG: handshake failed, reason: $1\n";
+            ( $as_submit_interval ) = $lines[1] =~ /^INTERVAL (.*)$/;
+            $as_submit_url = undef;
+        }
+        elsif ( $lines[0] =~ /^BADUSER$/ ) {
+            print "HS MSG: bad user\n";
+            ( $as_submit_interval ) = $lines[1] =~ /^INTERVAL (.*)$/;
+            $as_submit_url = undef;
+        }
+        else {
+            print "HS MSG: unknown response $lines[0]\n";
+            $as_submit_url = undef;
+        }
     }
-    elsif ( $lines[0] =~ /^FAILED (.*)$/ ) {
-      print "HS MSG: handshake failed, reason: $1\n";
-      ( $as_submit_interval ) = $lines[1] =~ /^INTERVAL (.*)$/;
-      $as_submit_url = undef;
-    }
-    elsif ( $lines[0] =~ /^BADUSER$/ ) {
-      print "HS MSG: bad user\n";
-      ( $as_submit_interval ) = $lines[1] =~ /^INTERVAL (.*)$/;
-      $as_submit_url = undef;
-    }
-    else {
-      print "HS MSG: unknown response $lines[0]\n";
-      $as_submit_url = undef;
-    }
-  }
-  return defined $as_submit_url;
+    return defined $as_submit_url;
 }
 
 sub send_update {
 
-  # nothing to do
-  return unless @artist_queue;
+    # nothing to do
+    return unless @artist_queue;
 
-  # no session, can't do anything
-  return unless as_session();
+    # no session, can't do anything
+    return unless as_session();
 
-  my $time = time();
-  # we have to respect AS's update interval
-  return if ( $time < ( $as_last_submit_time + $as_submit_interval ) );
-  $as_last_submit_time = $time;
+    my $time = time();
+    # we have to respect AS's update interval
+    return if ( $time < ( $as_last_submit_time + $as_submit_interval ) );
+    $as_last_submit_time = $time;
 
-  my $as_update = HTTP::Request->new( POST => $as_submit_url );
-  $as_update->content_type('application/x-www-form-urlencoded');
-  
-  my $md5_response = md5_hex(md5_hex( $user_preferences{ $UP_AS_PASSWORD } ).$as_md5_challenge);
-  my $content = 
-    'u='.as_encode( $user_preferences{ $UP_AS_USERNAME } ).'&s='.as_encode( $md5_response );
-
-  my $max_idx = $#artist_queue > 9 ? 9 : $#artist_queue;
-  my $log_msg;
-  for ( 0 .. $max_idx ) {
-    my $item = 
-      "&a[$_]=".as_encode( $artist_queue[ $_ ] ).
-	"&t[$_]=".as_encode( $title_queue[ $_ ] ).
-	  "&b[$_]=".
-	    "&m[$_]=".
-	      "&l[$_]=".as_encode( $total_time_queue[ $_ ] ).
-		"&i[$_]=".as_encode( $start_time_queue[ $_ ] );
-    $content .= $item;
-    $log_msg .= '  '.$artist_queue[ $_ ].' / '.$title_queue[ $_ ]."\n";
-  }
+    my $as_update = HTTP::Request->new( POST => $as_submit_url );
+    $as_update->content_type('application/x-www-form-urlencoded');
     
-  $as_update->content( $content );
+    my $md5_response = md5_hex(md5_hex( $user_preferences{ $UP_AS_PASSWORD } ).$as_md5_challenge);
+    my $content = 
+        'u='.as_encode( $user_preferences{ $UP_AS_USERNAME } ).'&s='.as_encode( $md5_response );
 
-  print "submitting:";
-  print $log_msg;
-  my $as_res = get_ua()->request( $as_update );
-  if (! $as_res->is_success) {
-    print $as_res->status_line, "\n";
-  } else {
-      
-    my @lines = split( "\n", $as_res->content );
-    if ( $lines[0] =~ /^OK$/ ) {
-      print "SBMT MSG: OK\n";
-      ( $as_submit_interval ) = $lines[1] =~ /^INTERVAL (.*)$/;
-      if ( $max_idx < $#artist_queue ) {
-	@artist_queue = $artist_queue[ $max_idx+1 .. $#artist_queue ];
-	@title_queue = $title_queue[ $max_idx+1 .. $#artist_queue ];
-	@total_time_queue = $total_time_queue[ $max_idx+1 .. $#artist_queue ];
-	@start_time_queue = $start_time_queue[ $max_idx+1 .. $#artist_queue ];
-      } else {
-	@artist_queue = ();
-	@title_queue = ();
-	@total_time_queue = ();
-	@start_time_queue = ();
-      }
+    my $max_idx = $#artist_queue > 9 ? 9 : $#artist_queue;
+    my $log_msg;
+    for ( 0 .. $max_idx ) {
+        my $item = 
+            "&a[$_]=".as_encode( $artist_queue[ $_ ] ).
+            "&t[$_]=".as_encode( $title_queue[ $_ ] ).
+            "&b[$_]=".
+            "&m[$_]=".
+            "&l[$_]=".as_encode( $total_time_queue[ $_ ] ).
+            "&i[$_]=".as_encode( $start_time_queue[ $_ ] );
+        $content .= $item;
+        $log_msg .= '  '.$artist_queue[ $_ ].' / '.$title_queue[ $_ ]."\n";
     }
-    elsif ( $lines[0] =~ /^FAILED (.*)$/ ) {
-      print STDERR "SBMT MSG: submit failed, reason: $1\n";
-      ( $as_submit_interval ) = $lines[1] =~ /^INTERVAL (.*)$/;
-      $as_submit_url = undef; # do another handshake
+    
+    $as_update->content( $content );
+
+    print "submitting:";
+    print $log_msg;
+    my $as_res = get_ua()->request( $as_update );
+    if (! $as_res->is_success) {
+        print $as_res->status_line, "\n";
+    } else {
+        
+        my @lines = split( "\n", $as_res->content );
+        if ( $lines[0] =~ /^OK$/ ) {
+            print "SBMT MSG: OK\n";
+            ( $as_submit_interval ) = $lines[1] =~ /^INTERVAL (.*)$/;
+            if ( $max_idx < $#artist_queue ) {
+                @artist_queue = $artist_queue[ $max_idx+1 .. $#artist_queue ];
+                @title_queue = $title_queue[ $max_idx+1 .. $#artist_queue ];
+                @total_time_queue = $total_time_queue[ $max_idx+1 .. $#artist_queue ];
+                @start_time_queue = $start_time_queue[ $max_idx+1 .. $#artist_queue ];
+            } else {
+                @artist_queue = ();
+                @title_queue = ();
+                @total_time_queue = ();
+                @start_time_queue = ();
+            }
+        }
+        elsif ( $lines[0] =~ /^FAILED (.*)$/ ) {
+            print STDERR "SBMT MSG: submit failed, reason: $1\n";
+            ( $as_submit_interval ) = $lines[1] =~ /^INTERVAL (.*)$/;
+            $as_submit_url = undef; # do another handshake
+        }
+        elsif ( $lines[0] =~ /^BADAUTH$/ ) {
+            print STDERR "SBMT MSG: BADAUTH\n";
+            ( $as_submit_interval ) = $lines[1] =~ /^INTERVAL (.*)$/;
+            $as_submit_url = undef; # do another handshake
+        }
+        else {
+            print STDERR "SBMT MSG: unknown response $lines[0]\n";
+            $as_submit_url = undef; # do another handshake
+        }
     }
-    elsif ( $lines[0] =~ /^BADAUTH$/ ) {
-      print STDERR "SBMT MSG: BADAUTH\n";
-      ( $as_submit_interval ) = $lines[1] =~ /^INTERVAL (.*)$/;
-      $as_submit_url = undef; # do another handshake
-    }
-    else {
-      print STDERR "SBMT MSG: unknown response $lines[0]\n";
-      $as_submit_url = undef; # do another handshake
-    }
-  }
 }
 
 sub as_encode {
-  my $value = shift;
-  $value =~ s/([^\w()'*~!.-])/sprintf '%%%02x', ord $1/eg;
-  return $value;
+    my $value = shift;
+    $value =~ s/([^\w()'*~!.-])/sprintf '%%%02x', ord $1/eg;
+    return $value;
 }
 
 sub load_user_config {
-  my $CF;
+    my $CF;
 
-  my $user_config = expand_tildes('~/.atronscrobbler');
+    my $user_config = expand_tildes('~/.atronscrobbler');
 #  print "Expanded config is $user_config\n";
-  if (-e $user_config ) {
-    open ( $CF, $user_config ) or 
-      die "could not read ~/.atronscrobbler: $!";
-    print "reading ~/.atronscrobbler\n";
-    return parse_config( $CF );
-  } 
-  elsif (-e "/etc/atronscrobbler" ) {
-    open ( $CF, "/etc/atronscrobbler" ) or 
-      die "could not read /etc/atronscrobbler: $!";
-    print "reading /etc/atronscrobbler\n";
-    return parse_config( $CF );
-  }
-  else {
-    print <<"config instructions";
+    if (-e $user_config ) {
+        open ( $CF, $user_config ) or 
+            die "could not read ~/.atronscrobbler: $!";
+        print "reading ~/.atronscrobbler\n";
+        return parse_config( $CF );
+    } 
+    elsif (-e "/etc/atronscrobbler" ) {
+        open ( $CF, "/etc/atronscrobbler" ) or 
+            die "could not read /etc/atronscrobbler: $!";
+        print "reading /etc/atronscrobbler\n";
+        return parse_config( $CF );
+    }
+    else {
+        print <<"config instructions";
 
-No config file found. Create a config file as either
-~/atronscrobbler or /etc/atronscrobbler. Include in it these values:
+        No config file found. Create a config file as either
+            ~/atronscrobbler or /etc/atronscrobbler. Include in it these values:
 
 #
 # The audiotron_host is the host name or ip address of the audiotron. You
 # should be able to ping your audiotron using this address.
 #
-  audiotron_host = myatron
+            audiotron_host = myatron
 
 #
 # The audiotron may require a username and password. Enter them here:
 # If your audiotron does not require a username and password, leave
 # these blank.
 #
-  audiotron_username=
-  audiotron_password=
+            audiotron_username=
+            audiotron_password=
 #
 # AudioScrobber requires a username and password. Enter those here:
 # http://www.audioscrobbler.com
 #
-  audioscrobbler_username=
-  audioscrobbler_password=
-config instructions
-    return 0;
-  }
-}
-  
-sub parse_config {
-  my $CF = shift;
-  
-  while (<$CF>) {
-    chomp;                  # no newline
-    s/#.*//;                # no comments
-    s/^\s+//;               # no leading white
-    s/\s+$//;               # no trailing white
-    next unless length;     # anything left?
-    my ($var, $value) = split(/\s*=\s*/, $_, 2);
-    $user_preferences{ $var } = $value;
-  } 
-  
-  my $complete_config = 1;
-  foreach ( $UP_AT_HOST, $UP_AS_USERNAME, $UP_AS_PASSWORD ) {
-    if (! exists $user_preferences{ $_ } ) {
-      print STDERR "Required configuration value not found: $_\n";
-      $complete_config = 0;
+            audioscrobbler_username=
+            audioscrobbler_password=
+            config instructions
+            return 0;
     }
-  }
-  return $complete_config;
+}
+
+sub parse_config {
+    my $CF = shift;
+    
+    while (<$CF>) {
+        chomp;                  # no newline
+        s/#.*//;                # no comments
+        s/^\s+//;               # no leading white
+        s/\s+$//;               # no trailing white
+        next unless length;     # anything left?
+        my ($var, $value) = split(/\s*=\s*/, $_, 2);
+        $user_preferences{ $var } = $value;
+    } 
+    
+    my $complete_config = 1;
+    foreach ( $UP_AT_HOST, $UP_AS_USERNAME, $UP_AS_PASSWORD ) {
+        if (! exists $user_preferences{ $_ } ) {
+            print STDERR "Required configuration value not found: $_\n";
+            $complete_config = 0;
+        }
+    }
+    return $complete_config;
 }
 
 sub expand_tildes {
-  my $filename = shift;
-  $filename =~ s{^~([^/]*)}
+    my $filename = shift;
+    $filename =~ s{^~([^/]*)}
     { $1
-	? (getpwnam($1))[7]
-	  : ( $ENV{HOME} || $ENV{LOGDIR}
-	      || (getpwuid($>))[7]
-	    )
-	}ex;
-  return $filename;
+          ? (getpwnam($1))[7]
+          : ( $ENV{HOME} || $ENV{LOGDIR}
+              || (getpwuid($>))[7]
+          )
+    }ex;
+    return $filename;
 }
